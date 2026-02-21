@@ -16,7 +16,10 @@
 - **Live TradingView Chart** - Full XAU/USD chart with professional technical analysis tools
 - **Real-Time Price Updates** - Prices update every 30 seconds
 - **24H Statistics** - High, Low, Volume, and Gold/Silver Ratio
-- **Market Sentiment Indicator** - Visual gauge of current market mood
+- **Dynamic Market Sentiment** - Live calculation based on RSI, price momentum, and moving averages
+  - Updates every 30 seconds with price data
+  - 3 states: Bullish (>65%), Neutral (35-65%), Bearish (<35%)
+  - Weighted algorithm: 30% RSI, 40% momentum, 30% moving average
 
 ### 📰 Live News Feed
 - **Auto-Refreshing News** - Latest gold market news updates automatically
@@ -51,6 +54,37 @@
 - **Google Fonts (Inter)** - Modern typography
 - **CSS Grid & Flexbox** - Responsive layouts
 - **CSS Animations** - Smooth, performant effects
+
+## 🧠 How Sentiment Works
+
+The market sentiment indicator uses a **multi-factor algorithm** that updates every 30 seconds:
+
+### Calculation Components
+
+**1. RSI (Relative Strength Index) - 30% Weight**
+- Calculated from 14-period price history
+- RSI > 70 → Overbought (bearish signal)
+- RSI < 30 → Oversold (bullish signal)
+- RSI 30-70 → Gradual scaling
+
+**2. Price Momentum - 40% Weight**
+- Based on % change from previous period
+- Positive change → Bullish
+- Negative change → Bearish
+- Weighted 10x for stronger impact
+
+**3. Moving Average Position - 30% Weight**
+- Compares current price to 5-period moving average
+- Price above MA → Bullish
+- Price below MA → Bearish
+- Weighted 15x for significant moves
+
+### Sentiment Ranges
+- **0-35%** = BEARISH (Red badge)
+- **35-65%** = NEUTRAL (Yellow badge)
+- **65-100%** = BULLISH (Green badge)
+
+The algorithm is designed to be reactive but not overly sensitive, providing a balanced view of market conditions.
 
 ## 📦 Quick Start
 
