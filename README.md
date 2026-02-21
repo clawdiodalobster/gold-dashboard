@@ -15,7 +15,11 @@
 ### 📊 Real-Time Market Data
 - **Live TradingView Chart** - Full XAU/USD chart with professional technical analysis tools
 - **Real-Time Price Updates** - Prices update every 30 seconds
-- **24H Statistics** - High, Low, Volume, and Gold/Silver Ratio
+- **Dynamic 24H Statistics** - All stats update in real-time:
+  - **24H High/Low** - Tracks actual price extremes during session
+  - **Market Cap** - Calculated from current price × global gold supply (~200k tonnes)
+  - **Gold/Silver Ratio** - Live ratio calculation based on simulated silver prices
+  - **Volume** - Dynamic volume tracking influenced by market volatility
 - **Dynamic Market Sentiment** - Live calculation based on RSI, price momentum, and moving averages
   - Updates every 30 seconds with price data
   - 3 states: Bullish (>65%), Neutral (35-65%), Bearish (<35%)
@@ -85,6 +89,36 @@ The market sentiment indicator uses a **multi-factor algorithm** that updates ev
 - **65-100%** = BULLISH (Green badge)
 
 The algorithm is designed to be reactive but not overly sensitive, providing a balanced view of market conditions.
+
+## 📈 Dynamic Statistics Explained
+
+All price statistics update every 30 seconds alongside the price feed:
+
+### 24H High/Low
+- **Tracked in real-time** from session start
+- Resets on page reload (simulates 24H rolling window)
+- Percentage changes calculated relative to current price
+
+### Market Cap Calculation
+```
+Market Cap = (Gold Price × Total Supply × Troy Oz per Tonne) ÷ 1 Trillion
+           = (Price × 200,000 tonnes × 32,150.7 oz/tonne) ÷ 1e12
+           = ~$12-13 Trillion USD
+```
+
+### Gold/Silver Ratio
+- Historical average: ~60-80
+- Current tracking: Real-time calculation
+- Formula: `Gold Price ÷ Silver Price`
+- Higher ratio = Gold relatively more expensive vs Silver
+
+### Volume
+- Base: $4.2B daily (typical for spot gold)
+- **Dynamic adjustment**: Increases with volatility
+- Range: $3.5B - $5.5B to maintain realism
+- Formula: `Volume += (|%change| × 0.1) - 0.05`
+
+All statistics display live percentage changes with color-coded indicators (green up, red down).
 
 ## 📦 Quick Start
 
