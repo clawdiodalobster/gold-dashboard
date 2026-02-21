@@ -537,7 +537,7 @@
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">Volume</span>
-                    <span class="stat-value">$4.2B</span>
+                    <span class="stat-value" id="headerVolume">$4.2B</span>
                 </div>
             </div>
         </div>
@@ -645,6 +645,13 @@
         let priceHistory = [];
         let volumeHistory = [];
         const HISTORY_LENGTH = 14; // For RSI calculation
+        
+        // 24H tracking
+        let high24h = 0;
+        let low24h = Infinity;
+        let marketCapBase = 12.8; // Trillion USD base
+        let goldSilverRatio = 84.2;
+        let dailyVolume = 4.2; // Billion USD base
 
         // Calculate RSI from price history
         function calculateRSI(prices) {
@@ -733,6 +740,26 @@
                 priceHistory.push(price);
                 if (priceHistory.length > HISTORY_LENGTH) priceHistory.shift();
                 
+                // Track 24H high/low
+                if (price > high24h) high24h = price;
+                if (price < low24h) low24h = price;
+                
+                // Calculate dynamic values
+                const highChange = ((high24h - price) / price * 100).toFixed(1);
+                const lowChange = ((price - low24h) / price * 100).toFixed(1);
+                
+                // Update market cap based on price (gold total supply ~200,000 tonnes)
+                const marketCap = ((price * 200000 * 32150.7) / 1e12).toFixed(1); // Convert to trillion
+                
+                // Calculate Gold/Silver ratio (gold price / estimated silver price ~$24-26)
+                const silverPrice = 24 + (Math.random() * 2); // Simulated silver price
+                goldSilverRatio = (price / silverPrice).toFixed(1);
+                
+                // Update volume (increases with volatility)
+                const volatility = Math.abs(change);
+                dailyVolume += (volatility * 0.1) - 0.05; // Slight random walk
+                dailyVolume = Math.max(3.5, Math.min(5.5, dailyVolume)); // Keep realistic range
+                
                 // Calculate RSI
                 const rsi = calculateRSI(priceHistory);
                 
@@ -747,13 +774,37 @@
                 const changeEl = document.getElementById('headerChange');
                 changeEl.textContent = (change >= 0 ? '+' : '') + change + '%';
                 changeEl.className = 'change-badge ' + (change >= 0 ? 'positive' : 'negative');
+                document.getElementById('headerVolume').textContent = '$' + dailyVolume.toFixed(1) + 'B';
                 
-                // Update mini stats
-                document.getElementById('high24h').textContent = '$' + (price + 15.40).toFixed(2);
-                document.getElementById('low24h').textContent = '$' + (price - 7.90).toFixed(2);
+                // Update mini stats with real tracked values
+                document.getElementById('high24h').textContent = '$' + high24h.toFixed(2);
+                document.getElementById('low24h').textContent = '$' + low24h.toFixed(2);
+                
+                // Update mini stat changes
+                const highChangeEl = document.querySelector('.mini-stat-card:nth-child(1) .mini-stat-change');
+                highChangeEl.textContent = '+' + highChange + '%';
+                highChangeEl.className = 'mini-stat-change up';
+                
+                const lowChangeEl = document.querySelector('.mini-stat-card:nth-child(2) .mini-stat-change');
+                lowChangeEl.textContent = '-' + lowChange + '%';
+                lowChangeEl.className = 'mini-stat-change down';
+                
+                // Update market cap
+                document.querySelector('.mini-stat-card:nth-child(3) .mini-stat-value').textContent = '$' + marketCap + 'T';
+                const mcChange = ((marketCap - marketCapBase) / marketCapBase * 100).toFixed(1);
+                const mcChangeEl = document.querySelector('.mini-stat-card:nth-child(3) .mini-stat-change');
+                mcChangeEl.textContent = (mcChange >= 0 ? '+' : '') + mcChange + '%';
+                mcChangeEl.className = 'mini-stat-change ' + (mcChange >= 0 ? 'up' : 'down');
+                
+                // Update gold/silver ratio
+                document.querySelector('.mini-stat-card:nth-child(4) .mini-stat-value').textContent = goldSilverRatio;
+                const ratioChange = ((goldSilverRatio - 84.2) / 84.2 * 100).toFixed(1);
+                const ratioChangeEl = document.querySelector('.mini-stat-card:nth-child(4) .mini-stat-change');
+                ratioChangeEl.textContent = (ratioChange >= 0 ? '+' : '') + ratioChange + '%';
+                ratioChangeEl.className = 'mini-stat-change ' + (ratioChange >= 0 ? 'up' : 'down');
                 
                 // Log for debugging
-                console.log(`Price: $${price} | Change: ${change}% | RSI: ${rsi.toFixed(1)} | Sentiment: ${sentiment.toFixed(1)}%`);
+                console.log(`Price: $${price} | Change: ${change}% | RSI: ${rsi.toFixed(1)} | Sentiment: ${sentiment.toFixed(1)}% | High: $${high24h.toFixed(2)} | Low: $${low24h.toFixed(2)}`);
                 
             } catch (error) {
                 console.error('Error fetching price:', error);
@@ -846,7 +897,12 @@
         function initializePriceHistory() {
             const basePrice = 2050;
             for (let i = 0; i < HISTORY_LENGTH; i++) {
-                priceHistory.push(basePrice + (Math.random() - 0.5) * 15);
+                const price = basePrice + (Math.random() - 0.5) * 15;
+                priceHistory.push(price);
+                
+                // Set initial high/low from seed data
+                if (price > high24h) high24h = price;
+                if (price < low24h) low24h = price;
             }
         }
 
