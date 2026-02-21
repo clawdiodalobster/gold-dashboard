@@ -281,7 +281,7 @@
             height: 100%;
             background: linear-gradient(90deg, #EF4444 0%, #F59E0B 50%, #10B981 100%);
             border-radius: 20px;
-            transition: width 1s ease;
+            transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
         }
 
@@ -292,8 +292,20 @@
             height: 16px;
             background: #FFD700;
             border-radius: 50%;
-            box-shadow: 0 0 10px #FFD700;
-            transition: left 1s ease;
+            box-shadow: 0 0 10px #FFD700, 0 0 20px rgba(255, 215, 0, 0.5);
+            transition: left 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                box-shadow: 0 0 10px #FFD700, 0 0 20px rgba(255, 215, 0, 0.5);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 15px #FFD700, 0 0 30px rgba(255, 215, 0, 0.8);
+                transform: scale(1.1);
+            }
         }
 
         .sentiment-labels {
@@ -629,7 +641,84 @@
             }
         });
 
-        // Update gold price
+        // Market data history for calculations
+        let priceHistory = [];
+        let volumeHistory = [];
+        const HISTORY_LENGTH = 14; // For RSI calculation
+
+        // Calculate RSI from price history
+        function calculateRSI(prices) {
+            if (prices.length < HISTORY_LENGTH) return 50; // Neutral if not enough data
+            
+            let gains = 0;
+            let losses = 0;
+            
+            for (let i = 1; i < HISTORY_LENGTH; i++) {
+                const change = prices[i] - prices[i - 1];
+                if (change > 0) gains += change;
+                else losses += Math.abs(change);
+            }
+            
+            const avgGain = gains / HISTORY_LENGTH;
+            const avgLoss = losses / HISTORY_LENGTH;
+            
+            if (avgLoss === 0) return 100;
+            const rs = avgGain / avgLoss;
+            const rsi = 100 - (100 / (1 + rs));
+            
+            return rsi;
+        }
+
+        // Calculate market sentiment (0-100)
+        function calculateSentiment(price, change, rsi) {
+            let sentiment = 50; // Start neutral
+            
+            // RSI component (30% weight)
+            if (rsi > 70) sentiment -= 15; // Overbought = bearish
+            else if (rsi < 30) sentiment += 15; // Oversold = bullish
+            else sentiment += (rsi - 50) * 0.3; // Gradual
+            
+            // Price momentum component (40% weight)
+            sentiment += change * 10;
+            
+            // Moving average component (30% weight)
+            if (priceHistory.length >= 5) {
+                const recentAvg = priceHistory.slice(-5).reduce((a, b) => a + b, 0) / 5;
+                const momentum = ((price - recentAvg) / recentAvg) * 100;
+                sentiment += momentum * 15;
+            }
+            
+            // Clamp between 0 and 100
+            return Math.max(0, Math.min(100, sentiment));
+        }
+
+        // Update sentiment display
+        function updateSentimentMeter(sentimentValue) {
+            const fillEl = document.querySelector('.sentiment-fill');
+            const indicatorEl = document.querySelector('.sentiment-indicator');
+            const badgeEl = document.querySelector('.news-badge');
+            
+            // Smooth transition
+            fillEl.style.width = sentimentValue + '%';
+            indicatorEl.style.left = 'calc(' + sentimentValue + '% - 8px)';
+            
+            // Update badge text
+            if (sentimentValue > 65) {
+                badgeEl.textContent = 'BULLISH';
+                badgeEl.style.background = 'rgba(16, 185, 129, 0.15)';
+                badgeEl.style.color = '#10B981';
+            } else if (sentimentValue < 35) {
+                badgeEl.textContent = 'BEARISH';
+                badgeEl.style.background = 'rgba(239, 68, 68, 0.15)';
+                badgeEl.style.color = '#EF4444';
+            } else {
+                badgeEl.textContent = 'NEUTRAL';
+                badgeEl.style.background = 'rgba(251, 191, 36, 0.15)';
+                badgeEl.style.color = '#FBBF24';
+            }
+        }
+
+        // Update gold price with sentiment calculation
         async function updateGoldPrice() {
             try {
                 const response = await fetch('https://api.metals.dev/v1/latest?api_key=TESTKEY123456&currency=USD&unit=toz');
@@ -637,18 +726,34 @@
                 // Demo data with realistic variation
                 const basePrice = 2050;
                 const variation = (Math.random() - 0.5) * 20;
-                const price = (basePrice + variation).toFixed(2);
-                const change = ((Math.random() - 0.3) * 2).toFixed(2);
+                const price = parseFloat((basePrice + variation).toFixed(2));
+                const change = parseFloat(((Math.random() - 0.3) * 2).toFixed(2));
+                
+                // Add to history
+                priceHistory.push(price);
+                if (priceHistory.length > HISTORY_LENGTH) priceHistory.shift();
+                
+                // Calculate RSI
+                const rsi = calculateRSI(priceHistory);
+                
+                // Calculate sentiment
+                const sentiment = calculateSentiment(price, change, rsi);
+                
+                // Update sentiment meter
+                updateSentimentMeter(sentiment);
                 
                 // Update header
-                document.getElementById('headerPrice').textContent = '$' + price;
+                document.getElementById('headerPrice').textContent = '$' + price.toFixed(2);
                 const changeEl = document.getElementById('headerChange');
                 changeEl.textContent = (change >= 0 ? '+' : '') + change + '%';
                 changeEl.className = 'change-badge ' + (change >= 0 ? 'positive' : 'negative');
                 
                 // Update mini stats
-                document.getElementById('high24h').textContent = '$' + (parseFloat(price) + 15.40).toFixed(2);
-                document.getElementById('low24h').textContent = '$' + (parseFloat(price) - 7.90).toFixed(2);
+                document.getElementById('high24h').textContent = '$' + (price + 15.40).toFixed(2);
+                document.getElementById('low24h').textContent = '$' + (price - 7.90).toFixed(2);
+                
+                // Log for debugging
+                console.log(`Price: $${price} | Change: ${change}% | RSI: ${rsi.toFixed(1)} | Sentiment: ${sentiment.toFixed(1)}%`);
                 
             } catch (error) {
                 console.error('Error fetching price:', error);
@@ -737,11 +842,20 @@
             `).join('');
         }
 
+        // Initialize with seed data for immediate sentiment calculation
+        function initializePriceHistory() {
+            const basePrice = 2050;
+            for (let i = 0; i < HISTORY_LENGTH; i++) {
+                priceHistory.push(basePrice + (Math.random() - 0.5) * 15);
+            }
+        }
+
         // Initialize
+        initializePriceHistory();
         updateGoldPrice();
         loadNews();
         
-        // Update price every 30 seconds
+        // Update price and sentiment every 30 seconds
         setInterval(updateGoldPrice, 30000);
 
         // Auto-refresh news every 5 minutes
